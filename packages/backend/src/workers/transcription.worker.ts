@@ -8,16 +8,16 @@ import { socketService } from '../config/socket';
 // or call a Rust binary/FFI
 export const setupTranscriptionWorker = () => {
     transcriptionQueue.process(async (job) => {
-        const { meetingId, audioUrl, userId } = job.data as TranscriptionJobData;
+        const { meetingId, userId } = job.data as TranscriptionJobData;
 
         logger.info(`Processing transcription for meeting: ${meetingId}`);
         socketService.emitToUser(userId, 'transcription:progress', { meetingId, status: 'PROCESSING' });
         try {
             // 1. Download audio file (placeholder logic)
-            // In a real app, you'd download from S3
-            // const audioBuffer = await downloadFromS3(audioUrl);
+            // In a real app, you'd download from S3 (using audioUrl from job.data)
+            // const audioBuffer = await downloadFromS3(job.data.audioUrl);
 
-            // For now, assume audioUrl is a path or we fetch it
+            // For now, assume we fetch it
             // 2. Call STT Service (OpenAI Whisper)
             // This is where we'd ideally use our Rust core FFI
             // For this implementation, we'll simulate the call or use an axios request to OpenAI
@@ -45,7 +45,7 @@ export const setupTranscriptionWorker = () => {
             let createdTranscriptId: string;
 
             // 3. Save resulting transcription to DB
-            await prisma.$transaction(async (tx) => {
+            await prisma.$transaction(async (tx: any) => {
                 const transcript = await tx.transcript.create({
                     data: {
                         meetingId,
