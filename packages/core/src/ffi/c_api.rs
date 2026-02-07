@@ -1,7 +1,7 @@
 // C-compatible API for Node.js FFI
 // These functions use C calling conventions and can be called from Node.js
 
-use std::ffi::{CStr, CString};
+use std::ffi::CString;
 use std::os::raw::c_char;
 
 /// Initialize the library
@@ -36,6 +36,7 @@ pub extern "C" fn voice_pa_free_string(s: *mut c_char) {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::ffi::CStr;
 
     #[test]
     fn test_c_api_init() {
