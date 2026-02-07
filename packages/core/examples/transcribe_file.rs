@@ -1,4 +1,3 @@
-use voice_pa_core::audio::{WavEncoder, AudioEncoder};
 use voice_pa_core::transcription::WhisperClient;
 use std::env;
 use std::fs;

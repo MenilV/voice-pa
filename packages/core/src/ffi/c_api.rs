@@ -1,7 +1,7 @@
 // C-compatible API for Node.js FFI
 // These functions use C calling conventions and can be called from Node.js
 
-use std::ffi::CString;
+use std::ffi::{CStr, CString};
 use std::os::raw::c_char;
 
 /// Initialize the library

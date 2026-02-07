@@ -14,8 +14,6 @@ uniffi::setup_scaffolding!();
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-
     #[test]
     fn test_library_loads() {
         // Basic smoke test
