@@ -1,6 +1,6 @@
 use hound::{WavSpec, WavWriter};
 use std::io::Cursor;
-use crate::utils::error::{Result, VoicePAError};
+use crate::utils::error::Result;
 
 pub trait AudioEncoder {
     fn encode(&self, samples: &[f32], sample_rate: u32, channels: u16) -> Result<Vec<u8>>;

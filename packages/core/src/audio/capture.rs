@@ -1,7 +1,6 @@
 use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
 use cpal::{Device, Stream, StreamConfig};
 use std::sync::{Arc, Mutex};
-use tokio::sync::mpsc;
 use crate::utils::error::{Result, VoicePAError};
 
 #[derive(Debug, Clone, Copy)]
@@ -60,6 +59,7 @@ impl AudioRecorder {
         })
     }
 
+
     /// Start recording audio
     pub async fn start_recording(&mut self) -> Result<()> {
         let mut is_recording = self.is_recording.lock().unwrap();
@@ -70,11 +70,15 @@ impl AudioRecorder {
         // Clear previous buffer
         self.buffer.lock().unwrap().clear();
 
-        let stream_config = StreamConfig {
-            channels: self.config.channels,
-            sample_rate: cpal::SampleRate(self.config.sample_rate),
-            buffer_size: cpal::BufferSize::Default,
-        };
+        // Get the device's default input config
+        let supported_config = self.device
+            .default_input_config()
+            .map_err(|e| VoicePAError::AudioDevice(format!("Failed to get default input config: {}", e)))?;
+
+        log::info!("Device default config: {:?}", supported_config);
+
+        // Use the device's supported configuration
+        let stream_config: StreamConfig = supported_config.into();
 
         let buffer = Arc::clone(&self.buffer);
         let err_fn = |err| {
@@ -95,7 +99,7 @@ impl AudioRecorder {
         self.stream = Some(stream);
         *is_recording = true;
 
-        log::info!("Recording started");
+        log::info!("Recording started with config: {:?}", stream_config);
         Ok(())
     }
 

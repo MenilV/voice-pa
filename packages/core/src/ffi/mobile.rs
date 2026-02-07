@@ -4,8 +4,7 @@
 // Note: UniFFI bindings are defined in the .udl file
 // This module provides Rust implementations that UniFFI will expose
 
-use crate::audio::{AudioRecorder, AudioConfig};
-use crate::transcription::WhisperClient;
+use crate::audio::AudioRecorder;
 use crate::utils::error::Result;
 
 /// Simplified interface for mobile platforms
