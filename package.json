@@ -1,0 +1,53 @@
+{
+  "name": "voice-pa",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Unified voice recording and transcription platform",
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "build:core": "cd packages/core && cargo build --release",
+    "build:core:ios": "cd packages/core && cargo build --release --target aarch64-apple-ios",
+    "build:core:android": "cd packages/core && cargo build --release --target aarch64-linux-android",
+    "build:backend": "cd packages/backend && npm run build",
+    "build:web": "cd packages/web-dashboard && npm run build",
+    "build:landing": "cd packages/landing && npm run build",
+    "build:extensions": "npm run build:ext-meet && npm run build:ext-zoom",
+    "build:ext-meet": "cd packages/extension-meet && npm run build",
+    "build:ext-zoom": "cd packages/extension-zoom && npm run build",
+    "build:mobile": "cd packages/mobile && npm run build",
+    "dev:backend": "cd packages/backend && npm run dev",
+    "dev:web": "cd packages/web-dashboard && npm run dev",
+    "dev:landing": "cd packages/landing && npm run dev",
+    "test": "npm run test --workspaces --if-present",
+    "test:core": "cd packages/core && cargo test",
+    "lint": "npm run lint --workspaces --if-present",
+    "format": "npm run format --workspaces --if-present",
+    "clean": "npm run clean --workspaces --if-present && rm -rf node_modules",
+    "setup": "npm install && npm run build:core && cd packages/backend && npx prisma generate"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.0",
+    "eslint": "^8.56.0",
+    "prettier": "^3.2.4",
+    "typescript": "^5.3.3"
+  },
+  "engines": {
+    "node": ">=20.0.0",
+    "npm": ">=10.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/your-org/voice-pa.git"
+  },
+  "keywords": [
+    "voice",
+    "transcription",
+    "speech-to-text",
+    "meeting",
+    "recording"
+  ],
+  "author": "Voice PA Team",
+  "license": "MIT"
+}
