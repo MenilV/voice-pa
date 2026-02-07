@@ -1,13 +1,17 @@
-import express from 'express';
-import cors from 'cors';
-import helmet from 'helmet';
-import morgan from 'morgan';
-import { env } from './config/env';
-import { logger } from './utils/logger';
 import routes from './routes';
 import { errorMiddleware } from './middleware/error.middleware';
+import { createServer } from 'http';
+import { setupTranscriptionWorker } from './workers/transcription.worker';
+import { socketService } from './config/socket';
 
 const app = express();
+const httpServer = createServer(app);
+
+// Initialize Socket.io
+socketService.init(httpServer);
+
+// Initialize workers
+setupTranscriptionWorker();
 
 // Security middleware
 app.use(helmet());
@@ -29,12 +33,8 @@ app.use('/api', routes);
 app.use(errorMiddleware);
 
 // Start server
-const PORT = env.PORT;
-const HOST = env.HOST;
-
-app.listen(PORT, HOST, () => {
-    logger.info(`🚀 Server running on http://${HOST}:${PORT}`);
-    logger.info(`📝 Environment: ${env.NODE_ENV}`);
+httpServer.listen(env.PORT, () => {
+    logger.info(`Server is running on port ${env.PORT} in ${env.NODE_ENV} mode`);
 });
 
 // Graceful shutdown

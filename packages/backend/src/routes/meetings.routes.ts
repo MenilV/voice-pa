@@ -3,6 +3,7 @@ import { authMiddleware, AuthRequest } from '../middleware/auth.middleware';
 import { prisma } from '../config/database';
 import { createMeetingValidation } from '../middleware/validation.middleware';
 import { validationResult } from 'express-validator';
+import { transcriptionService } from '../services/transcription.service';
 
 const router = Router();
 
@@ -132,6 +133,14 @@ router.patch('/:id', async (req: AuthRequest, res: Response) => {
         const updated = await prisma.meeting.findUnique({
             where: { id: req.params.id },
         });
+
+        if (updated && status === 'PROCESSING' && updated.audioUrl) {
+            await transcriptionService.queueTranscription({
+                meetingId: updated.id,
+                audioUrl: updated.audioUrl,
+                userId: updated.userId,
+            });
+        }
 
         res.json({ meeting: updated });
     } catch (error: any) {
