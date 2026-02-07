@@ -1,0 +1,12 @@
+namespace voice_pa {
+    // Audio recording
+    interface MobileRecorder {
+        constructor();
+        [Async]
+        void start();
+        [Async]
+        sequence<f32> stop();
+        boolean is_recording();
+        f64 duration();
+    };
+};

@@ -1,0 +1,63 @@
+[package]
+name = "voice-pa-core"
+version = "0.1.0"
+edition = "2021"
+authors = ["Voice PA Team"]
+license = "MIT"
+description = "High-performance audio processing and transcription core library"
+
+[lib]
+name = "voice_pa_core"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[dependencies]
+# Audio processing
+cpal = "0.15"
+hound = "3.5"
+rubato = "0.15"
+
+# Async runtime
+tokio = { version = "1.35", features = ["full"] }
+futures = "0.3"
+
+# HTTP client for STT API
+reqwest = { version = "0.11", features = ["json", "multipart", "stream"] }
+
+# Serialization
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+# Error handling
+thiserror = "1.0"
+anyhow = "1.0"
+
+# Logging
+log = "0.4"
+env_logger = "0.11"
+
+# FFI bindings
+uniffi = "0.26"
+
+# Audio preprocessing
+dasp = "0.11"
+
+[dev-dependencies]
+criterion = "0.5"
+tempfile = "3.8"
+
+[build-dependencies]
+uniffi = { version = "0.26", features = ["build"] }
+
+[[bench]]
+name = "audio_benchmark"
+harness = false
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
+strip = true
+
+[profile.dev]
+opt-level = 0
+debug = true
