@@ -31,9 +31,6 @@ import java.nio.charset.CodingErrorAction
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicLong
-import kotlin.coroutines.resume
-import kotlinx.coroutines.CancellableContinuation
-import kotlinx.coroutines.suspendCancellableCoroutine
 
 // This is a helper for safely working with byte buffers returned from the Rust code.
 // A rust-owned buffer is represented by its capacity, its current length, and a
@@ -401,10 +398,12 @@ internal interface UniffiLib : Library {
     ): Double
     fun uniffi_voice_pa_core_fn_method_mobilerecorder_is_recording(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
     ): Byte
-    fun uniffi_voice_pa_core_fn_method_mobilerecorder_start(`ptr`: Pointer,
-    ): Pointer
-    fun uniffi_voice_pa_core_fn_method_mobilerecorder_stop(`ptr`: Pointer,
-    ): Pointer
+    fun uniffi_voice_pa_core_fn_method_mobilerecorder_start(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+    ): Unit
+    fun uniffi_voice_pa_core_fn_method_mobilerecorder_stop(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    fun uniffi_voice_pa_core_fn_method_mobilerecorder_transcribe(`ptr`: Pointer,`samples`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
     fun ffi_voice_pa_core_rustbuffer_alloc(`size`: Int,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
     fun ffi_voice_pa_core_rustbuffer_from_bytes(`bytes`: ForeignBytes.ByValue,uniffi_out_err: UniffiRustCallStatus, 
@@ -525,6 +524,8 @@ internal interface UniffiLib : Library {
     ): Short
     fun uniffi_voice_pa_core_checksum_method_mobilerecorder_stop(
     ): Short
+    fun uniffi_voice_pa_core_checksum_method_mobilerecorder_transcribe(
+    ): Short
     fun uniffi_voice_pa_core_checksum_constructor_mobilerecorder_new(
     ): Short
     fun ffi_voice_pa_core_uniffi_contract_version(
@@ -550,59 +551,21 @@ private fun uniffiCheckApiChecksums(lib: UniffiLib) {
     if (lib.uniffi_voice_pa_core_checksum_method_mobilerecorder_is_recording() != 62305.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
-    if (lib.uniffi_voice_pa_core_checksum_method_mobilerecorder_start() != 38088.toShort()) {
+    if (lib.uniffi_voice_pa_core_checksum_method_mobilerecorder_start() != 23128.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
-    if (lib.uniffi_voice_pa_core_checksum_method_mobilerecorder_stop() != 44131.toShort()) {
+    if (lib.uniffi_voice_pa_core_checksum_method_mobilerecorder_stop() != 29259.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
-    if (lib.uniffi_voice_pa_core_checksum_constructor_mobilerecorder_new() != 32642.toShort()) {
+    if (lib.uniffi_voice_pa_core_checksum_method_mobilerecorder_transcribe() != 13835.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_voice_pa_core_checksum_constructor_mobilerecorder_new() != 54480.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
 }
 
 // Async support
-// Async return type handlers
-
-internal const val UNIFFI_RUST_FUTURE_POLL_READY = 0.toByte()
-internal const val UNIFFI_RUST_FUTURE_POLL_MAYBE_READY = 1.toByte()
-
-internal val uniffiContinuationHandleMap = UniFfiHandleMap<CancellableContinuation<Byte>>()
-
-// FFI type for Rust future continuations
-internal object uniffiRustFutureContinuationCallback: UniFffiRustFutureContinuationCallbackType {
-    override fun callback(continuationHandle: USize, pollResult: Byte) {
-        uniffiContinuationHandleMap.remove(continuationHandle)?.resume(pollResult)
-    }
-}
-
-internal suspend fun<T, F, E: Exception> uniffiRustCallAsync(
-    rustFuture: Pointer,
-    pollFunc: (Pointer, UniFffiRustFutureContinuationCallbackType, USize) -> Unit,
-    completeFunc: (Pointer, UniffiRustCallStatus) -> F,
-    freeFunc: (Pointer) -> Unit,
-    liftFunc: (F) -> T,
-    errorHandler: UniffiRustCallStatusErrorHandler<E>
-): T {
-    try {
-        do {
-            val pollResult = suspendCancellableCoroutine<Byte> { continuation ->
-                pollFunc(
-                    rustFuture,
-                    uniffiRustFutureContinuationCallback,
-                    uniffiContinuationHandleMap.insert(continuation)
-                )
-            }
-        } while (pollResult != UNIFFI_RUST_FUTURE_POLL_READY);
-
-        return liftFunc(
-            uniffiRustCallWithError(errorHandler, { status -> completeFunc(rustFuture, status) })
-        )
-    } finally {
-        freeFunc(rustFuture)
-    }
-}
-
 
 // Public interface members begin here.
 
@@ -989,9 +952,11 @@ public interface MobileRecorderInterface {
     
     fun `isRecording`(): Boolean
     
-    suspend fun `start`()
+    fun `start`()
     
-    suspend fun `stop`(): List<Float>
+    fun `stop`(): List<Float>
+    
+    fun `transcribe`(`samples`: List<Float>): String
     
     companion object
 }
@@ -1011,7 +976,7 @@ open class MobileRecorder : FFIObject, MobileRecorderInterface {
     constructor(noPointer: NoPointer): super(noPointer)
     constructor() :
         this(
-    uniffiRustCall() { _status ->
+    uniffiRustCallWithError(MobileException) { _status ->
     UniffiLib.INSTANCE.uniffi_voice_pa_core_fn_constructor_mobilerecorder_new(_status)
 })
 
@@ -1058,44 +1023,40 @@ open class MobileRecorder : FFIObject, MobileRecorderInterface {
         }
     
     
-    @Suppress("ASSIGNED_BUT_NEVER_ACCESSED_VARIABLE")
-    override suspend fun `start`() {
-        return uniffiRustCallAsync(
-            callWithPointer { thisPtr ->
-                UniffiLib.INSTANCE.uniffi_voice_pa_core_fn_method_mobilerecorder_start(
-                    thisPtr,
-                    
-                )
-            },
-            { future, callback, continuation -> UniffiLib.INSTANCE.ffi_voice_pa_core_rust_future_poll_void(future, callback, continuation) },
-            { future, continuation -> UniffiLib.INSTANCE.ffi_voice_pa_core_rust_future_complete_void(future, continuation) },
-            { future -> UniffiLib.INSTANCE.ffi_voice_pa_core_rust_future_free_void(future) },
-            // lift function
-            { Unit },
-            
-            // Error FFI converter
-            UniffiNullRustCallStatusErrorHandler,
-        )
-    }
+    @Throws(MobileException::class)override fun `start`() =
+        callWithPointer {
+    uniffiRustCallWithError(MobileException) { _status ->
+    UniffiLib.INSTANCE.uniffi_voice_pa_core_fn_method_mobilerecorder_start(it,
+        
+        _status)
+}
+        }
     
-    @Suppress("ASSIGNED_BUT_NEVER_ACCESSED_VARIABLE")
-    override suspend fun `stop`() : List<Float> {
-        return uniffiRustCallAsync(
-            callWithPointer { thisPtr ->
-                UniffiLib.INSTANCE.uniffi_voice_pa_core_fn_method_mobilerecorder_stop(
-                    thisPtr,
-                    
-                )
-            },
-            { future, callback, continuation -> UniffiLib.INSTANCE.ffi_voice_pa_core_rust_future_poll_rust_buffer(future, callback, continuation) },
-            { future, continuation -> UniffiLib.INSTANCE.ffi_voice_pa_core_rust_future_complete_rust_buffer(future, continuation) },
-            { future -> UniffiLib.INSTANCE.ffi_voice_pa_core_rust_future_free_rust_buffer(future) },
-            // lift function
-            { FfiConverterSequenceFloat.lift(it) },
-            // Error FFI converter
-            UniffiNullRustCallStatusErrorHandler,
-        )
-    }
+    
+    
+    @Throws(MobileException::class)override fun `stop`(): List<Float> =
+        callWithPointer {
+    uniffiRustCallWithError(MobileException) { _status ->
+    UniffiLib.INSTANCE.uniffi_voice_pa_core_fn_method_mobilerecorder_stop(it,
+        
+        _status)
+}
+        }.let {
+            FfiConverterSequenceFloat.lift(it)
+        }
+    
+    
+    @Throws(MobileException::class)override fun `transcribe`(`samples`: List<Float>): String =
+        callWithPointer {
+    uniffiRustCallWithError(MobileException) { _status ->
+    UniffiLib.INSTANCE.uniffi_voice_pa_core_fn_method_mobilerecorder_transcribe(it,
+        FfiConverterSequenceFloat.lower(`samples`),
+        _status)
+}
+        }.let {
+            FfiConverterString.lift(it)
+        }
+    
     
 
     
@@ -1131,6 +1092,59 @@ public object FfiConverterTypeMobileRecorder: FfiConverter<MobileRecorder, Point
 
 
 
+
+sealed class MobileException(message: String): Exception(message) {
+        
+        class AudioDevice(message: String) : MobileException(message)
+        
+        class AudioStream(message: String) : MobileException(message)
+        
+        class General(message: String) : MobileException(message)
+        
+
+    companion object ErrorHandler : UniffiRustCallStatusErrorHandler<MobileException> {
+        override fun lift(error_buf: RustBuffer.ByValue): MobileException = FfiConverterTypeMobileError.lift(error_buf)
+    }
+}
+
+public object FfiConverterTypeMobileError : FfiConverterRustBuffer<MobileException> {
+    override fun read(buf: ByteBuffer): MobileException {
+        
+            return when(buf.getInt()) {
+            1 -> MobileException.AudioDevice(FfiConverterString.read(buf))
+            2 -> MobileException.AudioStream(FfiConverterString.read(buf))
+            3 -> MobileException.General(FfiConverterString.read(buf))
+            else -> throw RuntimeException("invalid error enum value, something is very wrong!!")
+        }
+        
+    }
+
+    override fun allocationSize(value: MobileException): Int {
+        return 4
+    }
+
+    override fun write(value: MobileException, buf: ByteBuffer) {
+        when(value) {
+            is MobileException.AudioDevice -> {
+                buf.putInt(1)
+                Unit
+            }
+            is MobileException.AudioStream -> {
+                buf.putInt(2)
+                Unit
+            }
+            is MobileException.General -> {
+                buf.putInt(3)
+                Unit
+            }
+        }.let { /* this makes the `when` an expression, which ensures it is exhaustive */ }
+    }
+
+}
+
+
+
+
 public object FfiConverterSequenceFloat: FfiConverterRustBuffer<List<Float>> {
     override fun read(buf: ByteBuffer): List<Float> {
         val len = buf.getInt()
@@ -1152,8 +1166,4 @@ public object FfiConverterSequenceFloat: FfiConverterRustBuffer<List<Float>> {
         }
     }
 }
-
-
-
-
 

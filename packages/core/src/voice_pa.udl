@@ -1,11 +1,21 @@
 namespace voice_pa_core {};
 
+[Error]
+enum MobileError {
+    "AudioDevice",
+    "AudioStream",
+    "General",
+};
+
 interface MobileRecorder {
+    [Throws=MobileError]
     constructor();
-    [Async]
+    [Throws=MobileError]
     void start();
-    [Async]
+    [Throws=MobileError]
     sequence<f32> stop();
     boolean is_recording();
     f64 duration();
+    [Throws=MobileError]
+    string transcribe(sequence<f32> samples);
 };

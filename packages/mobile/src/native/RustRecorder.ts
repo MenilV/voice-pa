@@ -32,6 +32,12 @@ export interface IRustRecorder {
      * Returns the current duration of the recording in seconds.
      */
     duration(): Promise<number>;
+
+    /**
+     * Transcribes the last recorded audio using Whisper API.
+     * @returns Promise<string> The transcription text.
+     */
+    transcribe(): Promise<string>;
 }
 
 const RustRecorder: IRustRecorder = {
@@ -39,6 +45,7 @@ const RustRecorder: IRustRecorder = {
     stop: () => NativeRustRecorder.stop(),
     isRecording: () => NativeRustRecorder.isRecording(),
     duration: () => NativeRustRecorder.duration(),
+    transcribe: () => NativeRustRecorder.transcribe(),
 };
 
 export default RustRecorder;

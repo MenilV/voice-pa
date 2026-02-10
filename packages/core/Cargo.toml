@@ -41,6 +41,10 @@ uniffi = { version = "0.26", features = ["cli"] }
 # Audio preprocessing
 dasp = "0.11"
 
+# Android NDK context (for cpal/Oboe)
+[target.'cfg(target_os = "android")'.dependencies]
+ndk-context = "0.1"
+
 [dev-dependencies]
 criterion = "0.5"
 tempfile = "3.8"

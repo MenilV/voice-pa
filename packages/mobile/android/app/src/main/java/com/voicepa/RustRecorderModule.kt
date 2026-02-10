@@ -12,6 +12,7 @@ import kotlinx.coroutines.launch
 
 class RustRecorderModule(reactContext: ReactApplicationContext) : ReactContextBaseJavaModule(reactContext) {
     private var recorder: MobileRecorder? = null
+    private var lastAudioData: List<Float>? = null
     private val scope = CoroutineScope(Dispatchers.Main)
 
     override fun getName(): String {
@@ -20,17 +21,11 @@ class RustRecorderModule(reactContext: ReactApplicationContext) : ReactContextBa
 
     @ReactMethod
     fun start(promise: Promise) {
-        if (recorder == null) {
+        scope.launch(Dispatchers.IO) {
             try {
-                recorder = MobileRecorder()
-            } catch (e: Exception) {
-                promise.reject("ERROR", "Failed to initialize recorder: ${e.message}")
-                return
-            }
-        }
-
-        scope.launch {
-            try {
+                if (recorder == null) {
+                    recorder = MobileRecorder()
+                }
                 recorder?.start()
                 promise.resolve(null)
             } catch (e: Exception) {
@@ -41,10 +36,11 @@ class RustRecorderModule(reactContext: ReactApplicationContext) : ReactContextBa
 
     @ReactMethod
     fun stop(promise: Promise) {
-        scope.launch {
+        scope.launch(Dispatchers.IO) {
             try {
                 val audioData = recorder?.stop()
                 if (audioData != null) {
+                    lastAudioData = audioData
                     val array = Arguments.createArray()
                     for (sample in audioData) {
                         array.pushDouble(sample.toDouble())
@@ -55,6 +51,23 @@ class RustRecorderModule(reactContext: ReactApplicationContext) : ReactContextBa
                 }
             } catch (e: Exception) {
                 promise.reject("ERROR", "Failed to stop recording: ${e.message}")
+            }
+        }
+    }
+
+    @ReactMethod
+    fun transcribe(promise: Promise) {
+        scope.launch(Dispatchers.IO) {
+            try {
+                val samples = lastAudioData
+                if (samples != null && recorder != null) {
+                    val text = recorder!!.transcribe(samples)
+                    promise.resolve(text)
+                } else {
+                    promise.reject("ERROR", "No audio data to transcribe")
+                }
+            } catch (e: Exception) {
+                promise.reject("ERROR", "Transcription failed: ${e.message}")
             }
         }
     }

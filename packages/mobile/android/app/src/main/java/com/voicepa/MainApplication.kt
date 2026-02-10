@@ -22,6 +22,8 @@ class MainApplication : Application(), ReactApplication {
 
   override fun onCreate() {
     super.onCreate()
+    // Load native library early — JNI_OnLoad initializes NDK context for cpal/Oboe audio
+    System.loadLibrary("uniffi_voice_pa_core")
     loadReactNative(this)
   }
 }
