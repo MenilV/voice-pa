@@ -60,7 +60,7 @@ export default function DashboardOverview() {
                             <div>
                                 <h3 className="text-3xl font-bold tracking-tighter">{stat.value}</h3>
                                 <div className="mt-2 text-xs font-bold text-zinc-400 flex items-center gap-1">
-                                    <span className="text-emerald-500">{stat.trend}</span> {(stat.label === 'Tokens Used') ? '' : 'from last week'}
+                                    <span className="text-emerald-500">{stat.trend}</span> {(stat.label === 'Tokens Used') ? '' : ' from last week'}
                                 </div>
                             </div>
                         </div>
